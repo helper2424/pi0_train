@@ -101,3 +101,18 @@ ssh $(vastai ssh-url 20695198)
 ```bash
 
 ```
+
+
+### 4. Clean up
+
+To stop the instance u can use the following command:
+
+```bash
+vastai stop instance 20695198
+```
+
+To delete the instance u can use the following command:
+
+```bash
+vastai destroy instance 20695198
+```
