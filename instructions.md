@@ -13,7 +13,7 @@ wget https://raw.githubusercontent.com/helper2424/pi0_train/7f81b1d76fe119237fe2
 Command to build it
 
 ```bash
-docker build -t helper2424/openpi:latest --target development .
+docker build  --platform linux/amd64 -t helper2424/openpi:latest --target development .
 ```
 
 U can use your own dockerhub account, mine is `helper2424`.
