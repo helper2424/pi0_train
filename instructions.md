@@ -70,37 +70,41 @@ ID        CUDA   N  Model     PCIE  cpu_ghz  vCPUs    RAM  Disk  $/hr    DLP   D
 The first column is the ID of the offer. We can now rent it with the following command:
 
 ```bash
-vastai create instance 19115553 --image helper2424/openpi:latest --env '-p 5678:5678 -p 5679:5679/udp -p 5680:5680' --disk 100 --ssh
-```
-
-If u want to have a ready to use jupyter lab, u can use the following command:
-
-```bash
-vastai create instance 19115553 --image helper2424/openpi:latest --env '-p 5678:5678 -p 5679:5679/udp -p 5680:5680' --disk 100--jupyter --direct 
+vastai create instance 19688417 --image helper2424/openpi:latest --env '-p 5678:5678 -p 5679:5679/udp -p 5680:5680' --disk 100 --jupyter --ssh --jupyter-lab --direct
 ```
 
 The result will be like a following:
 ```bash
-Started. {'success': True, 'new_contract': 20695198}
+Started. {'success': True, 'new_contract': 19115553}
 ```
 
 Check the instance status with the following command:
 
 ```bash
-vastai show instance 20695198
+vastai show instance 20700028
 ```
 
 Whenever the status is `ready` u can connect to the instance with the following command:
 
 ```bash
-ssh $(vastai ssh-url 20695198)
+ssh $(vastai ssh-url 20700028)
 ```
 
 ### 2.2. Run the training
 
+Firstly calculate the normalization statistics for the training data.
+
 ```bash
+uv run scripts/compute_norm_stats.py --config-name sam_frames4_fast
+```
+
+Run the training with the following command:
+
+```bash
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py sam_frames4_fast --exp-name=my_experiment --overwrite
 
 ```
+
 
 
 ### 4. Clean up

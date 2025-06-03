@@ -4,7 +4,14 @@
 # ================================
 # Stage 1: Dependencies and Build
 # ================================
-FROM nvidia/cuda:12.2.2-cudnn8-runtime-ubuntu22.04@sha256:2d913b09e6be8387e1a10976933642c73c840c0b735f0bf3c28d97fc9bc422e0 AS base
+
+FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS base
+
+# RUN gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 871920D1991BC93C
+# RUN gpg --export 871920D1991BC93C | tee /etc/apt/trusted.gpg.d/ubuntu.lafibre.info.gpg
+# RUN apt update
+
+FROM base AS base2
 
 # Install uv for fast Python package management
 COPY --from=ghcr.io/astral-sh/uv:0.5.1 /uv /uvx /bin/
@@ -13,17 +20,7 @@ COPY --from=ghcr.io/astral-sh/uv:0.5.1 /uv /uvx /bin/
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    git \
-    git-lfs \
-    linux-headers-generic \
-    build-essential \
-    clang \
-    ca-certificates \
-    curl \
-    nano \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+RUN apt-get update && apt-get install -y git git-lfs linux-headers-generic build-essential clang ffmpeg
 
 # Configure UV for containerized environment
 ENV UV_LINK_MODE=copy
@@ -36,7 +33,7 @@ RUN uv venv --python 3.11.9 $UV_PROJECT_ENVIRONMENT
 # ================================
 # Stage 2: Dependencies Installation
 # ================================
-FROM base AS deps
+FROM base2 AS deps
 
 # Copy dependency files for better Docker layer caching
 COPY uv.lock pyproject.toml ./
@@ -122,6 +119,8 @@ CMD ["uv", "run", "scripts/serve_policy.py", "policy:checkpoint", "--host", "0.0
 # Stage 5: Development Runtime (optional)
 # ================================
 FROM app-build AS development
+
+RUN apt-get update && apt-get install -y nano
 
 # Install development dependencies
 RUN --mount=type=cache,target=/tmp/uv-cache \
