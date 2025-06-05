@@ -57,7 +57,7 @@ vastai search offers 'gpu_name=RTX_4090 num_gpus=1' --limit 5 --order 'dph_total
 If u want using H100, u can use the following command:
 
 ```bash
-vastai search offers 'gpu_name=H100_SXM num_gpus=1' --limit 5 --order 'dph_total,reliability-total' 
+vastai search offers 'gpu_name=H100_SXM num_gpus=4' --limit 5 --order 'dph_total,reliability-total' 
 ```
 
 The response example is the following:
@@ -70,39 +70,51 @@ ID        CUDA   N  Model     PCIE  cpu_ghz  vCPUs    RAM  Disk  $/hr    DLP   D
 The first column is the ID of the offer. We can now rent it with the following command:
 
 ```bash
-vastai create instance 19688417 --image helper2424/openpi:latest --env '-p 5678:5678 -p 5679:5679/udp -p 5680:5680' --disk 100 --jupyter --ssh --jupyter-lab --direct
+vastai create instance 11080295 --image helper2424/openpi:latest --env '-p 5678:5678 -p 5679:5679/udp -p 5680:5680' --disk 100 --jupyter --ssh --jupyter-lab --direct
 ```
 
 The result will be like a following:
 ```bash
-Started. {'success': True, 'new_contract': 19115553}
+Started. {'success': True, 'new_contract': 20745916}
 ```
 
 Check the instance status with the following command:
 
 ```bash
-vastai show instance 20700028
+vastai show instance 20795024
 ```
 
 Whenever the status is `ready` u can connect to the instance with the following command:
 
 ```bash
-ssh $(vastai ssh-url 20700028)
+ssh $(vastai ssh-url 20795024)
 ```
 
-### 2.2. Run the training
+### 2.2. Go to the app dir
+
+```bash
+cd /app
+```
+
+### 2.3. Run the training
 
 Firstly calculate the normalization statistics for the training data.
 
 ```bash
-uv run scripts/compute_norm_stats.py --config-name sam_frames4_fast
+CUDA_VISIBLE_DEVICES=0 uv run scripts/compute_norm_stats.py --config-name sam_frames4_fast
+```
+
+The `CUDA_VISIBLE_DEVICES=0` is important to use only one GPU for the normalization statistics computation. In other case the script fails in machiens with several GPUS with the following error:
+
+```bash
+ raise ValueError(f"One of {what_aval}{name_str} was given the sharding "
+ValueError: One of device_put args was given the sharding of NamedSharding(mesh=Mesh('B': 4, axis_types=(Auto,)), spec=PartitionSpec('B',), memory_kind=device), which implies that the global size of its dimension 0 should be divisible by 4, but it is equal to 1 (full shape: (1, 10, 7))
 ```
 
 Run the training with the following command:
 
 ```bash
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py sam_frames4_fast --exp-name=my_experiment --overwrite
-
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 uv run scripts/train.py sam_frames4_fast --exp-name=my_experiment --overwrite --fsdp_devices=4
 ```
 
 
@@ -118,5 +130,5 @@ vastai stop instance 20695198
 To delete the instance u can use the following command:
 
 ```bash
-vastai destroy instance 20695198
+vastai destroy instance 20795024
 ```
