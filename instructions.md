@@ -70,7 +70,7 @@ ID        CUDA   N  Model     PCIE  cpu_ghz  vCPUs    RAM  Disk  $/hr    DLP   D
 The first column is the ID of the offer. We can now rent it with the following command:
 
 ```bash
-vastai create instance 11080295 --image helper2424/openpi:latest --env '-p 5678:5678 -p 5679:5679/udp -p 5680:5680' --disk 100 --jupyter --ssh --jupyter-lab --direct
+vastai create instance 19449554 --image helper2424/openpi:latest --env '-p 5678:5678 -p 5679:5679/udp -p 5680:5680' --disk 100 --jupyter --ssh --jupyter-lab --direct
 ```
 
 The result will be like a following:
@@ -81,13 +81,13 @@ Started. {'success': True, 'new_contract': 20745916}
 Check the instance status with the following command:
 
 ```bash
-vastai show instance 20795024
+vastai show instance 20812830
 ```
 
 Whenever the status is `ready` u can connect to the instance with the following command:
 
 ```bash
-ssh $(vastai ssh-url 20795024)
+ssh $(vastai ssh-url 20812830)
 ```
 
 ### 2.2. Go to the app dir
@@ -101,7 +101,7 @@ cd /app
 Firstly calculate the normalization statistics for the training data.
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 uv run scripts/compute_norm_stats.py --config-name sam_frames4_fast
+CUDA_VISIBLE_DEVICES=0 uv run scripts/compute_norm_stats.py --config-name demo3_frames_grab3
 ```
 
 The `CUDA_VISIBLE_DEVICES=0` is important to use only one GPU for the normalization statistics computation. In other case the script fails in machiens with several GPUS with the following error:
@@ -114,7 +114,7 @@ ValueError: One of device_put args was given the sharding of NamedSharding(mesh=
 Run the training with the following command:
 
 ```bash
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 uv run scripts/train.py sam_frames4_fast --exp-name=my_experiment --overwrite --fsdp_devices=4
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 uv run scripts/train.py demo3_frames_grab3 --exp-name=my_experiment --overwrite --fsdp_devices=4 --save_interval=5000 --log_interval=100 --batch_size=128 --num_workers=$(nproc)
 ```
 
 
