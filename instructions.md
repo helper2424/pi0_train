@@ -51,13 +51,13 @@ vastai set api-key <your key>
 Search for a suitable instance with the following command:
 
 ```bash
-vastai search offers 'gpu_name=RTX_4090 num_gpus=1' --limit 5 --order 'dph_total,reliability-total' 
+vastai search offers 'gpu_name=H100_NVL num_gpus=8' --limit 10 --order 'dph_total,reliability-total' 
 ```
 
 If u want using H100, u can use the following command:
 
 ```bash
-vastai search offers 'gpu_name=H100_SXM num_gpus=4' --limit 5 --order 'dph_total,reliability-total' 
+vastai search offers 'gpu_name=H100_SXM num_gpus=8' --limit 10 --order 'dph_total,reliability-total' 
 ```
 
 The response example is the following:
@@ -70,7 +70,7 @@ ID        CUDA   N  Model     PCIE  cpu_ghz  vCPUs    RAM  Disk  $/hr    DLP   D
 The first column is the ID of the offer. We can now rent it with the following command:
 
 ```bash
-vastai create instance 19449554 --image helper2424/openpi:latest --env '-p 5678:5678 -p 5679:5679/udp -p 5680:5680' --disk 100 --jupyter --ssh --jupyter-lab --direct
+vastai create instance 20756105 --image helper2424/openpi_workable:latest --env '-p 5678:5678 -p 5679:5679/udp -p 5680:5680' --disk 200 --ssh --jupyter --jupyter-lab --direct
 ```
 
 The result will be like a following:
@@ -81,16 +81,39 @@ Started. {'success': True, 'new_contract': 20745916}
 Check the instance status with the following command:
 
 ```bash
-vastai show instance 20812830
+vastai show instance 21062054
 ```
 
 Whenever the status is `ready` u can connect to the instance with the following command:
 
 ```bash
-ssh $(vastai ssh-url 20812830)
+ssh $(vastai ssh-url 21062054)
 ```
 
-### 2.2. Go to the app dir
+### 2.2. Not Vastai
+
+I you use cloud provider that doen't support docker images, you can install docker instantly in the instance and use preparred by me docker image.
+
+How to install docker in limux instance:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y docker.io
+```
+
+Srart the docker daemon:
+
+```bash
+sudo systemctl start docker
+```
+
+Run the docker container with bash, also don't forget to provide enoguht resources and give accces to all GPUS:
+
+```bash
+docker run -it --gpus all --rm --name openpi -p 5678:5678 -p 5679:5679/udp -p 5680:5680 helper2424/openpi:latest bash
+```
+
+### 2.3. Go to the app dir
 
 ```bash
 cd /app
@@ -114,8 +137,49 @@ ValueError: One of device_put args was given the sharding of NamedSharding(mesh=
 Run the training with the following command:
 
 ```bash
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 uv run scripts/train.py demo3_frames_grab3 --exp-name=my_experiment --overwrite --fsdp_devices=4 --save_interval=5000 --log_interval=100 --batch_size=128 --num_workers=$(nproc)
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py demo3_frames_grab3 --exp-name=my_experiment --overwrite --save_interval=2 --log_interval=100 --batch_size=32 --num_workers=4
 ```
+
+Too debug openpi - use the following command:
+```
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.6 uv run scripts/train.py debug  --exp-name=my_experiment --overwrite --save_interval=2 --log_interval=10   
+```
+
+To train on the real robot - use the following command:
+
+Train wiht 1 card
+
+```bash
+CUDA_VISIBLE_DEVICES=0 uv run scripts/compute_norm_stats.py --config-name demo3_frames_grab3
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 uv run scripts/train.py demo3_frames_grab3 --exp-name=check_pi0 --overwrite --save_interval=2 --log_interval=100 --batch_size=2 --num_workers=4
+```
+
+Train with 8 H100
+
+```bash
+CUDA_VISIBLE_DEVICES=0 uv run scripts/compute_norm_stats.py --config-name demo3_frames_grab3
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py demo3_frames_grab3 --exp-name=speed_up_pi0_8gpu_256_batch --overwrite --save_interval=1000 --log_interval=100 --batch_size=64 --num_workers=4 --fsdp_devices=8
+
+uv run scripts/train.py demo3_frames_grab3 --exp-name=speed_up_pi0_8gpu_256_batch --overwrite --save_interval=1000 --log_interval=100
+```
+
+
+### 3.4. Commands to run training
+
+```bash
+cd /
+rm -rf openpi
+rm -rf app
+git clone https://github.com/helper2424/openpi.git
+cd openpi
+git fetch origin workable_commit_with_sam_policies_and_config
+git checkout d42caa9144b63506a4a0a2e4974a38531b355840
+ vi /.venv/lib64/python3.11/site-packages/lerobot/common/datasets/utils.py 
+GIT_LFS_SKIP_SMUDGE=1  uv sync
+CUDA_VISIBLE_DEVICES=0 uv run scripts/compute_norm_stats.py --config-name demo3_frames_grab3
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 uv run scripts/train.py demo3_frames_grab3 --exp-name=speed_up_pi0_8gpu_256_batch --overwrite --save_interval=1000 --log_interval=100 --batch_size=128 --num_workers=8 --fsdp_devices=8 --num_train_steps=7500
+```
+
 
 
 
