@@ -16,6 +16,11 @@ Command to build it
 docker build  --platform linux/amd64 -t helper2424/openpi:latest --target development .
 ```
 
+Last image
+```
+docker build  --platform linux/amd64 -t helper2424/openpi_master_with_config:latest --target development -f Dockerfile .
+```
+
 U can use your own dockerhub account, mine is `helper2424`.
 
 Push it to your dockerhub account:
@@ -113,6 +118,9 @@ Run the docker container with bash, also don't forget to provide enoguht resourc
 docker run -it --gpus all --rm --name openpi -p 5678:5678 -p 5679:5679/udp -p 5680:5680 helper2424/openpi:latest bash
 ```
 
+```bash
+docker run -it --gpus all --rm --name openpi -p 5678:5678 -p 5679:5679/udp -p 5680:5680 -v /app:/app helper2424/openpi_master_with_config:latest bash
+```
 ### 2.3. Go to the app dir
 
 ```bash
@@ -160,7 +168,7 @@ Train with 8 H100
 CUDA_VISIBLE_DEVICES=0 uv run scripts/compute_norm_stats.py --config-name demo3_frames_grab3
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py demo3_frames_grab3 --exp-name=speed_up_pi0_8gpu_256_batch --overwrite --save_interval=1000 --log_interval=100 --batch_size=64 --num_workers=4 --fsdp_devices=8
 
-uv run scripts/train.py demo3_frames_grab3 --exp-name=speed_up_pi0_8gpu_256_batch --overwrite --save_interval=1000 --log_interval=100
+uv run scripts/train.py demo3_frames_grab3 --exp-name=check_a1000 --overwrite --save_interval=2 --log_interval=100 --checkpoint_base_dir=/checkpoints --batch_size=1
 ```
 
 
@@ -177,7 +185,7 @@ git checkout d42caa9144b63506a4a0a2e4974a38531b355840
  vi /.venv/lib64/python3.11/site-packages/lerobot/common/datasets/utils.py 
 GIT_LFS_SKIP_SMUDGE=1  uv sync
 CUDA_VISIBLE_DEVICES=0 uv run scripts/compute_norm_stats.py --config-name demo3_frames_grab3
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 uv run scripts/train.py demo3_frames_grab3 --exp-name=speed_up_pi0_8gpu_256_batch --overwrite --save_interval=1000 --log_interval=100 --batch_size=128 --num_workers=8 --fsdp_devices=8 --num_train_steps=7500
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py demo3_frames_grab3 --exp-name=speed_up_pi0_8gpu_128_batch --overwrite --save_interval=1000 --log_interval=100 --batch_size=128 --num_workers=8 --fsdp_devices=8 --num_train_steps=7500
 ```
 
 
@@ -195,4 +203,40 @@ To delete the instance u can use the following command:
 
 ```bash
 vastai destroy instance 20795024
+```
+
+
+### Cloud lambda flow
+
+To start the tmux session, u need to run the following command:
+
+```bash
+tmux
+```
+
+If u join the second time, u need to run the following command to attach the session:
+
+```bash
+tmux attach -t 0
+```
+
+Run the docker image:
+
+```bash
+sudo docker run -it --gpus all --rm --name openpi -p 5678:5678 -p 5679:5679/udp -p 5680:5680 -v /checkpoints:/checkpoints helper2424/openpi_master_with_config:latest bash
+```
+
+
+For 8 gpu with 256 batch size
+```bash
+cd /app
+CUDA_VISIBLE_DEVICES=0 uv run scripts/compute_norm_stats.py --config-name demo3_frames_grab3
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py demo3_frames_grab3 --exp-name=speed_up_pi0_8gpu_256_batch --overwrite --save_interval=1000 --log_interval=100 --batch_size=256 --num_workers=8 --fsdp_devices=8 --num_train_steps=7500 --checkpoint_base_dir=/checkpoints
+```
+
+For 1 gpu with 32 batch size
+```bash
+cd /app
+CUDA_VISIBLE_DEVICES=0 uv run scripts/compute_norm_stats.py --config-name demo3_frames_grab3
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py demo3_frames_grab3 --exp-name=speed_up_pi0_1gpu_32_batch --overwrite --save_interval=1000 --log_interval=100 --batch_size=32 --num_workers=8 --fsdp_devices=1 --num_train_steps=30000 --checkpoint_base_dir=/checkpoints
 ```
